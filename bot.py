@@ -1,13 +1,12 @@
 import json
+import argparse
 
 import puka
 import slackweb
 
-SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/T1QBV6FK3/" \
-                    "B1SA3L6HJ/5qERMBlTSP73gYuWWi38jgVG"
 
-def main():
-    slack = slackweb.Slack(url=SLACK_WEBHOOK_URL)
+def main(slack_webhook_url):
+    slack = slackweb.Slack(url=slack_webhook_url)
 
     # declare and connect a consumer
     consumer = puka.Client("amqp://192.168.111.14/")
@@ -39,4 +38,8 @@ def main():
     consumer.close()
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--url', dest='url')
+    args = parser.parse_args()
+
+    main(args.url)
