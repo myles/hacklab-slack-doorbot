@@ -32,12 +32,11 @@ def main(slack_webhook_url):
     while True:
         message = consumer.wait(message_promise)
 
-        logging.info(message)
-
         try:
             body = json.loads(message['body'])
         except:
             body = {'door': False}
+            logging.info(message)
 
         if body['door'] == 'Unit 6 Exit':
             slack.notify(text="{0} has left HackLab.".format(body['nickname']))
