@@ -1,8 +1,11 @@
 import json
+import logging
 import argparse
 
 import puka
 import slackweb
+
+logging.basicConfig(filename='bot.log', level=logging.INFO)
 
 
 def main(slack_webhook_url):
@@ -28,10 +31,14 @@ def main(slack_webhook_url):
 
     while True:
         message = consumer.wait(message_promise)
+
+        logging.info(message)
+
         try:
             body = json.loads(message['body'])
         except:
             body = {'door': False}
+
         if body['door'] == 'Unit 6 Exit':
             slack.notify(text="{0} has left HackLab.".format(body['nickname']))
         elif body['door'] == 'Unit 6':
