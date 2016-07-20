@@ -1,3 +1,4 @@
+import re
 import json
 import logging
 import argparse
@@ -6,6 +7,9 @@ import puka
 import slackweb
 
 logging.basicConfig(filename='bot.log', level=logging.INFO)
+
+ENTRY_TEXT = '{0} has entered HackLab.'
+EXIT_TEXT = '{0} has left HackLab.'
 
 
 def main(slack_webhook_url):
@@ -34,15 +38,27 @@ def main(slack_webhook_url):
 
         try:
             body = json.loads(message['body'])
-        except:
-            body = {'door': False}
-            logging.info(message)
+        except ValueError as e:
+            raw = message['body']
+
+            # StackOverflow: <http://stackoverflow.com/a/18515887/43363>
+            # Find the position of the bad apostrophe from the exception.
+            unexp = int(re.findall(r'\(char (\d+)\)', str(e))[0])
+
+            # Position of the unescaped '""' before that.
+            unesc = raw.rfind('"', 0, unexp)
+            raw = raw[:unesc] + r'\"' + raw[unesc+1:]
+
+            # The position of the corresponding closing '"'
+            closg = raw.find(r'"', unesc + 2)
+            raw = raw[:closg] + r'\"' + raw[closg+1:]
+
+            body = json.loads(raw)
 
         if body['door'] == 'Unit 6 Exit':
-            slack.notify(text="{0} has left HackLab.".format(body['nickname']))
+            slack.notify(text=EXIT_TEXT.format(body['nickname']))
         elif body['door'] == 'Unit 6':
-            slack.notify(text="{0} has entered HackLab.".format(
-                                                            body['nickname']))
+            slack.notify(text=ENTRY_TEXT.format(body['nickname']))
 
     consumer.close()
 
