@@ -54,6 +54,8 @@ def main(slack_webhook_url):
             raw = raw[:closg] + r'\"' + raw[closg+1:]
 
             body = json.loads(raw)
+        except:
+            logging.info(message)
 
         if body['door'] == 'Unit 6 Exit':
             slack.notify(text=EXIT_TEXT.format(body['nickname']))
