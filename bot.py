@@ -6,7 +6,8 @@ import argparse
 import puka
 import slackweb
 
-logging.basicConfig(filename='bot.log', level=logging.INFO)
+logging.basicConfig(filename='bot.log', format='%(asctime)s %(message)s',
+                    level=logging.DEBUG)
 
 ENTRY_TEXT = '{0} has entered HackLab.'
 EXIT_TEXT = '{0} has left HackLab.'
@@ -55,12 +56,16 @@ def main(slack_webhook_url):
 
             body = json.loads(raw)
         except:
-            logging.info(message)
+            logging.debug("Message `{0}` failed to be parsed.".format(message))
 
         if body['door'] == 'Unit 6 Exit':
             slack.notify(text=EXIT_TEXT.format(body['nickname']))
+            logging.info('Notify Slack about {0} exiting the '
+                         'HackLab.'.format(body['nickname']))
         elif body['door'] == 'Unit 6':
             slack.notify(text=ENTRY_TEXT.format(body['nickname']))
+            logging.info('Notify Slack about {0} entering the '
+                         'HackLab.'.format(body['nickname']))
 
     consumer.close()
 
