@@ -13,6 +13,29 @@ ENTRY_TEXT = '{0} has entered HackLab.'
 EXIT_TEXT = '{0} has left HackLab.'
 
 
+def json_loads(raw):
+    try:
+        body = json.loads(raw)
+    except ValueError as e:
+        # StackOverflow: <http://stackoverflow.com/a/18515887/43363>
+        # Find the position of the bad apostrophe from the exception.
+        unexp = int(re.findall(r'\(char (\d+)\)', str(e))[0])
+
+        # Position of the unescaped '""' before that.
+        unesc = raw.rfind('"', 0, unexp)
+        raw = raw[:unesc] + r'\"' + raw[unesc+1:]
+
+        # The position of the corresponding closing '"'
+        closg = raw.find(r'"', unesc + 2)
+        raw = raw[:closg] + r'\"' + raw[closg+1:]
+
+        body = json.loads(raw)
+    except:
+        logging.debug("JSON `{0}` failed to be parsed.".format(raw))
+
+    return body
+
+
 def main(slack_webhook_url):
     slack = slackweb.Slack(url=slack_webhook_url)
 
@@ -25,38 +48,24 @@ def main(slack_webhook_url):
     queue_promise = consumer.queue_declare(exclusive=True)
     queue = consumer.wait(queue_promise)['queue']
 
-    # bind the queue to newsletter exchange
-    bind_promise = consumer.queue_bind(exchange='door.entry', queue=queue,
-                                       routing_key='doorbot')
-    consumer.wait(bind_promise)
+    # bind the queue to door.entry exchange
+    bind_doorbot_promise = consumer.queue_bind(exchange='door.entry',
+                                               queue=queue,
+                                               routing_key='doorbot')
+    consumer.wait(bind_doorbot_promise)
 
-    # start waiting for messages on the queue created beforehand and print
-    # them out
+    # bind the queue to autodoor exchange
+    #bind_autodoor_promise = consumer.queue_bind(exchange='', queue=queue,
+    #                                            routing_key='autodoor')
+    #consumer.wait(bind_autodoor_promise)
+
+    # start waiting for messages on the queue created beforehand
     message_promise = consumer.basic_consume(queue=queue, no_ack=True)
 
     while True:
         message = consumer.wait(message_promise)
 
-        try:
-            body = json.loads(message['body'])
-        except ValueError as e:
-            raw = message['body']
-
-            # StackOverflow: <http://stackoverflow.com/a/18515887/43363>
-            # Find the position of the bad apostrophe from the exception.
-            unexp = int(re.findall(r'\(char (\d+)\)', str(e))[0])
-
-            # Position of the unescaped '""' before that.
-            unesc = raw.rfind('"', 0, unexp)
-            raw = raw[:unesc] + r'\"' + raw[unesc+1:]
-
-            # The position of the corresponding closing '"'
-            closg = raw.find(r'"', unesc + 2)
-            raw = raw[:closg] + r'\"' + raw[closg+1:]
-
-            body = json.loads(raw)
-        except:
-            logging.debug("Message `{0}` failed to be parsed.".format(message))
+        body = json_loads(message['body'])
 
         if body['door'] == 'Unit 6 Exit':
             slack.notify(text=EXIT_TEXT.format(body['nickname']))
