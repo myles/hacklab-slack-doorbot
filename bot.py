@@ -40,16 +40,17 @@ def json_loads(raw):
     return body
 
 
-def send_slack_message(msg):
+def send_slack_message(webhook_url, msg):
     """
     Send a Slack message.
     """
-    slack = slackweb.Slack(url=slack_webhook_url)
+    slack = slackweb.Slack(url=webhook_url)
 
     try:
         return slack.notify(msg)
     except:
         return None
+
 
 def main(slack_webhook_url):
     # declare and connect a consumer
@@ -81,11 +82,13 @@ def main(slack_webhook_url):
         body = json_loads(message['body'])
 
         if body['door'] == 'Unit 6 Exit':
-            send_slack_message(EXIT_TEXT.format(body['nickname']))
+            send_slack_message(slack_webhook_url,
+                               EXIT_TEXT.format(body['nickname']))
             logging.info('Notify Slack about {0} exiting the '
                          'HackLab.'.format(body['nickname']))
         elif body['door'] == 'Unit 6':
-            send_slack_message(ENTRY_TEXT.format(body['nickname']))
+            send_slack_message(slack_webhook_url,
+                               ENTRY_TEXT.format(body['nickname']))
             logging.info('Notify Slack about {0} entering the '
                          'HackLab.'.format(body['nickname']))
 
