@@ -14,6 +14,10 @@ EXIT_TEXT = '{0} has left HackLab.'
 
 
 def json_loads(raw):
+    """
+    Make sure JSON is valid and fix it if it's not.
+    """
+
     try:
         body = json.loads(raw)
     except ValueError as e:
@@ -36,9 +40,18 @@ def json_loads(raw):
     return body
 
 
-def main(slack_webhook_url):
+def send_slack_message(msg):
+    """
+    Send a Slack message.
+    """
     slack = slackweb.Slack(url=slack_webhook_url)
 
+    try:
+        return slack.notify(msg)
+    except:
+        return None
+
+def main(slack_webhook_url):
     # declare and connect a consumer
     consumer = puka.Client("amqp://192.168.111.14/")
     connect_promise = consumer.connect()
@@ -55,9 +68,9 @@ def main(slack_webhook_url):
     consumer.wait(bind_doorbot_promise)
 
     # bind the queue to autodoor exchange
-    #bind_autodoor_promise = consumer.queue_bind(exchange='', queue=queue,
-    #                                            routing_key='autodoor')
-    #consumer.wait(bind_autodoor_promise)
+    # bind_autodoor_promise = consumer.queue_bind(exchange='', queue=queue,
+    #                                             routing_key='autodoor')
+    # consumer.wait(bind_autodoor_promise)
 
     # start waiting for messages on the queue created beforehand
     message_promise = consumer.basic_consume(queue=queue, no_ack=True)
@@ -68,11 +81,11 @@ def main(slack_webhook_url):
         body = json_loads(message['body'])
 
         if body['door'] == 'Unit 6 Exit':
-            slack.notify(text=EXIT_TEXT.format(body['nickname']))
+            send_slack_message(EXIT_TEXT.format(body['nickname']))
             logging.info('Notify Slack about {0} exiting the '
                          'HackLab.'.format(body['nickname']))
         elif body['door'] == 'Unit 6':
-            slack.notify(text=ENTRY_TEXT.format(body['nickname']))
+            send_slack_message(ENTRY_TEXT.format(body['nickname']))
             logging.info('Notify Slack about {0} entering the '
                          'HackLab.'.format(body['nickname']))
 
